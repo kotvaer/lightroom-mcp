@@ -91,6 +91,18 @@
       "description": "Create one named virtual copy and return its catalog ID."
     },
     {
+      "name": "create_develop_snapshot",
+      "description": "Create a recovery snapshot on a verified virtual copy."
+    },
+    {
+      "name": "restore_develop_snapshot",
+      "description": "Restore a named recovery snapshot on a verified virtual copy."
+    },
+    {
+      "name": "set_stylepilot_develop_settings",
+      "description": "Apply range-checked StylePilot settings to a verified virtual copy."
+    },
+    {
       "name": "set_develop_settings",
       "description": "Set Develop settings directly on a photo."
     }

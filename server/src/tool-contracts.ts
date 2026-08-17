@@ -93,6 +93,20 @@ export const DEVELOP_SETTING_KEYS = [
   "CropAngle",
 ] as const;
 
+export const STYLEPILOT_DEVELOP_PARAMETER_RANGES = {
+  Exposure2012: [-5, 5],
+  Contrast2012: [-100, 100],
+  Highlights2012: [-100, 100],
+  Shadows2012: [-100, 100],
+  Whites2012: [-100, 100],
+  Blacks2012: [-100, 100],
+  Texture: [-100, 100],
+  Clarity2012: [-100, 100],
+  Dehaze: [-100, 100],
+  Vibrance: [-100, 100],
+  Saturation: [-100, 100],
+} as const;
+
 const stringArray = (description: string, maxItems?: number) => ({
   type: "array",
   items: { type: "string" },
@@ -116,6 +130,12 @@ const developSettingValueSchema = {
 
 const developSettingsProperties = Object.fromEntries(
   DEVELOP_SETTING_KEYS.map((key) => [key, developSettingValueSchema]),
+);
+
+const stylePilotDevelopSettingsProperties = Object.fromEntries(
+  Object.entries(STYLEPILOT_DEVELOP_PARAMETER_RANGES).map(
+    ([key, [minimum, maximum]]) => [key, { type: "number", minimum, maximum }],
+  ),
 );
 
 export const TOOL_CONTRACTS: ToolContract[] = [
@@ -370,6 +390,85 @@ export const TOOL_CONTRACTS: ToolContract[] = [
         },
       },
       required: ["photo_id", "copy_name"],
+    },
+  },
+  {
+    name: "create_develop_snapshot",
+    luaHandler: "HandlerDevelop.createDevelopSnapshot",
+    description:
+      "Create a uniquely named recovery snapshot on a Lightroom virtual copy before StylePilot writes Develop settings",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        photo_id: {
+          type: "string",
+          minLength: 1,
+          description: "Virtual-copy photo ID or file path",
+        },
+        snapshot_name: {
+          type: "string",
+          minLength: 1,
+          maxLength: 255,
+          description: "Unique recovery snapshot name",
+        },
+      },
+      required: ["photo_id", "snapshot_name"],
+    },
+  },
+  {
+    name: "restore_develop_snapshot",
+    luaHandler: "HandlerDevelop.restoreDevelopSnapshot",
+    description:
+      "Restore a named recovery snapshot on a Lightroom virtual copy after a failed StylePilot write",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        photo_id: {
+          type: "string",
+          minLength: 1,
+          description: "Virtual-copy photo ID or file path",
+        },
+        snapshot_name: {
+          type: "string",
+          minLength: 1,
+          maxLength: 255,
+          description: "Recovery snapshot name returned by create_develop_snapshot",
+        },
+      },
+      required: ["photo_id", "snapshot_name"],
+    },
+  },
+  {
+    name: "set_stylepilot_develop_settings",
+    luaHandler: "HandlerDevelop.setStylePilotDevelopSettings",
+    description:
+      "Apply StylePilot's numeric, range-checked Develop subset to a verified Lightroom virtual copy",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        photo_id: {
+          type: "string",
+          minLength: 1,
+          description: "Virtual-copy photo ID or file path",
+        },
+        history_name: {
+          type: "string",
+          minLength: 1,
+          maxLength: 255,
+          description: "Lightroom History panel entry",
+        },
+        settings: {
+          type: "object",
+          properties: stylePilotDevelopSettingsProperties,
+          additionalProperties: false,
+          minProperties: 1,
+          description: "Strictly range-checked StylePilot Develop settings",
+        },
+      },
+      required: ["photo_id", "history_name", "settings"],
     },
   },
   {

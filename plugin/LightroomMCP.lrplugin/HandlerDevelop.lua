@@ -93,9 +93,33 @@ for _, key in ipairs(ALLOWED_DEVELOP_SETTING_KEYS) do
     ALLOWED_DEVELOP_SETTING_LOOKUP[key] = true
 end
 
+-- StylePilot deliberately uses a much smaller numeric-only surface than the
+-- general MCP develop tool. These ranges mirror the Python domain model and
+-- provide an independent guard at the final Lightroom write boundary.
+local STYLEPILOT_DEVELOP_PARAMETER_RANGES = {
+    Exposure2012 = { -5, 5 },
+    Contrast2012 = { -100, 100 },
+    Highlights2012 = { -100, 100 },
+    Shadows2012 = { -100, 100 },
+    Whites2012 = { -100, 100 },
+    Blacks2012 = { -100, 100 },
+    Texture = { -100, 100 },
+    Clarity2012 = { -100, 100 },
+    Dehaze = { -100, 100 },
+    Vibrance = { -100, 100 },
+    Saturation = { -100, 100 },
+}
+
 local function requireString(value, name)
     if type(value) ~= "string" or value == "" then
         error(name .. " is required")
+    end
+end
+
+local function requireBoundedString(value, name)
+    requireString(value, name)
+    if #value > 255 then
+        error(name .. " must contain at most 255 characters")
     end
 end
 
@@ -157,6 +181,56 @@ local function requireDevelopSettingsObject(settings)
     if count == 0 then
         error("settings is required")
     end
+end
+
+local function requireStylePilotDevelopSettings(settings)
+    if type(settings) ~= "table" then
+        error("settings is required")
+    end
+
+    local count = 0
+    for key, value in pairs(settings) do
+        local valueRange = STYLEPILOT_DEVELOP_PARAMETER_RANGES[key]
+        if not valueRange then
+            error("Unsupported StylePilot develop setting key: " .. tostring(key))
+        end
+        if type(value) ~= "number" or value ~= value
+            or value == math.huge or value == -math.huge then
+            error("StylePilot develop setting " .. key .. " must be a finite number")
+        end
+        if value < valueRange[1] or value > valueRange[2] then
+            error(string.format(
+                "StylePilot develop setting %s must be between %s and %s",
+                key,
+                tostring(valueRange[1]),
+                tostring(valueRange[2])
+            ))
+        end
+        count = count + 1
+    end
+
+    if count == 0 then
+        error("settings is required")
+    end
+end
+
+local function requireVirtualCopy(photo, photoId)
+    if photo:getRawMetadata('isVirtualCopy') ~= true then
+        error("Refusing StylePilot write: photo is not a virtual copy: " .. photoId)
+    end
+end
+
+local function findDevelopSnapshotByName(photo, snapshotName)
+    local matched
+    for _, snapshot in ipairs(photo:getDevelopSnapshots() or {}) do
+        if snapshot.name == snapshotName then
+            if matched then
+                error("Multiple Develop snapshots have the same name: " .. snapshotName)
+            end
+            matched = snapshot
+        end
+    end
+    return matched
 end
 
 local function requireDevelopSettingWhitelist(settings)
@@ -280,10 +354,7 @@ end
 
 function DevelopHandler.createVirtualCopy(args)
     requireString(args.photo_id, "photo_id")
-    requireString(args.copy_name, "copy_name")
-    if #args.copy_name > 255 then
-        error("copy_name must contain at most 255 characters")
-    end
+    requireBoundedString(args.copy_name, "copy_name")
 
     local catalog = LrApplication.activeCatalog()
     local source = PhotoLookup.resolveOne(catalog, args.photo_id)
@@ -313,6 +384,103 @@ function DevelopHandler.createVirtualCopy(args)
             filename = virtualCopy:getFormattedMetadata('fileName'),
             copy_name = args.copy_name,
         },
+    }
+end
+
+function DevelopHandler.createDevelopSnapshot(args)
+    requireString(args.photo_id, "photo_id")
+    requireBoundedString(args.snapshot_name, "snapshot_name")
+
+    local catalog = LrApplication.activeCatalog()
+    local photo = PhotoLookup.resolveOne(catalog, args.photo_id)
+    if not photo then
+        error("Photo not found: " .. args.photo_id)
+    end
+    requireVirtualCopy(photo, args.photo_id)
+
+    local created = false
+    catalog:withWriteAccessDo("Create StylePilot Develop Snapshot", function()
+        created = photo:createDevelopSnapshot(args.snapshot_name, false)
+    end)
+    if not created then
+        error("Develop snapshot already exists: " .. args.snapshot_name)
+    end
+
+    local snapshot = findDevelopSnapshotByName(photo, args.snapshot_name)
+    if not snapshot or not snapshot.snapshotID then
+        error("Created Develop snapshot could not be resolved: " .. args.snapshot_name)
+    end
+
+    Log.info(string.format("Created Develop snapshot %s on photo %s",
+        args.snapshot_name, args.photo_id))
+
+    return {
+        success = true,
+        photo_id = args.photo_id,
+        snapshot = {
+            id = snapshot.snapshotID,
+            global_id = snapshot.id_global,
+            name = snapshot.name,
+        },
+    }
+end
+
+function DevelopHandler.restoreDevelopSnapshot(args)
+    requireString(args.photo_id, "photo_id")
+    requireBoundedString(args.snapshot_name, "snapshot_name")
+
+    local catalog = LrApplication.activeCatalog()
+    local photo = PhotoLookup.resolveOne(catalog, args.photo_id)
+    if not photo then
+        error("Photo not found: " .. args.photo_id)
+    end
+    requireVirtualCopy(photo, args.photo_id)
+
+    local snapshot = findDevelopSnapshotByName(photo, args.snapshot_name)
+    if not snapshot or not snapshot.snapshotID then
+        error("Develop snapshot not found: " .. args.snapshot_name)
+    end
+
+    -- Snapshot application has historically been sensitive to the active
+    -- photo. Select the resolved virtual copy so another filmstrip photo can
+    -- never receive the rollback.
+    catalog:setSelectedPhotos(photo, {})
+    catalog:withWriteAccessDo("Restore StylePilot Develop Snapshot", function()
+        photo:applyDevelopSnapshot(snapshot.snapshotID)
+    end)
+
+    Log.info(string.format("Restored Develop snapshot %s on photo %s",
+        args.snapshot_name, args.photo_id))
+
+    return {
+        success = true,
+        photo_id = args.photo_id,
+        snapshot_id = snapshot.snapshotID,
+        snapshot_name = snapshot.name,
+    }
+end
+
+function DevelopHandler.setStylePilotDevelopSettings(args)
+    requireString(args.photo_id, "photo_id")
+    requireBoundedString(args.history_name, "history_name")
+    requireStylePilotDevelopSettings(args.settings)
+
+    local catalog = LrApplication.activeCatalog()
+    local photo = PhotoLookup.resolveOne(catalog, args.photo_id)
+    if not photo then
+        error("Photo not found: " .. args.photo_id)
+    end
+    requireVirtualCopy(photo, args.photo_id)
+
+    catalog:withWriteAccessDo(args.history_name, function()
+        photo:applyDevelopSettings(args.settings, args.history_name)
+    end)
+
+    Log.info(string.format("Set guarded StylePilot settings on virtual copy %s", args.photo_id))
+
+    return {
+        success = true,
+        photo_id = args.photo_id,
     }
 end
 

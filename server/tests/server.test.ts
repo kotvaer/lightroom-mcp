@@ -45,10 +45,10 @@ describe('createMcpServer', () => {
   });
 
   describe('ListTools', () => {
-    it('returns all 15 tools', async () => {
+    it('returns all 18 tools', async () => {
       pair = await connect();
       const { tools } = await pair.client.listTools();
-      expect(tools).toHaveLength(15);
+      expect(tools).toHaveLength(18);
     });
 
     it('includes search_photos and set_develop_settings', async () => {
@@ -57,6 +57,9 @@ describe('createMcpServer', () => {
       const names = tools.map((t) => t.name);
       expect(names).toContain('search_photos');
       expect(names).toContain('create_virtual_copy');
+      expect(names).toContain('create_develop_snapshot');
+      expect(names).toContain('restore_develop_snapshot');
+      expect(names).toContain('set_stylepilot_develop_settings');
       expect(names).toContain('set_develop_settings');
     });
 

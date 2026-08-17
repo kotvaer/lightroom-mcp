@@ -139,6 +139,9 @@ local DISPATCH = {
     apply_develop_preset = HandlerDevelop.applyDevelopPreset,
     copy_develop_settings = HandlerDevelop.copyDevelopSettings,
     create_virtual_copy = HandlerDevelop.createVirtualCopy,
+    create_develop_snapshot = HandlerDevelop.createDevelopSnapshot,
+    restore_develop_snapshot = HandlerDevelop.restoreDevelopSnapshot,
+    set_stylepilot_develop_settings = HandlerDevelop.setStylePilotDevelopSettings,
     set_develop_settings = HandlerDevelop.setDevelopSettings,
 }
 
