@@ -207,6 +207,66 @@ describe("HandlerDevelop.copyDevelopSettings", function()
     end)
 end)
 
+describe("HandlerDevelop.createVirtualCopy", function()
+    it("creates exactly one named copy from the resolved source", function()
+        local source = helper.fakePhoto({
+            id = "1", path = "/a.jpg", fileName = "a.jpg",
+        })
+        local catalog, Handler = setup({ photos = { source } })
+
+        local r = Handler.createVirtualCopy({
+            photo_id = "1",
+            copy_name = "StylePilot Preview",
+        })
+
+        assert.is_true(r.success)
+        assert.are.equal("1", r.source_photo_id)
+        assert.are.equal("virtual-1", r.virtual_copy.id)
+        assert.are.equal("/a.jpg", r.virtual_copy.path)
+        assert.are.equal("a.jpg", r.virtual_copy.filename)
+        assert.are.equal("StylePilot Preview", r.virtual_copy.copy_name)
+        assert.are.equal(1, #catalog.getCreatedVirtualCopies())
+        assert.are.equal("virtual-1", catalog.getSelectedPhoto().localIdentifier)
+    end)
+
+    it("validates arguments before changing the selection", function()
+        local source = helper.fakePhoto({
+            id = "1", path = "/a.jpg", fileName = "a.jpg",
+        })
+        local catalog, Handler = setup({ photos = { source } })
+
+        assert.has_error(function()
+            Handler.createVirtualCopy({ copy_name = "Preview" })
+        end)
+        assert.has_error(function()
+            Handler.createVirtualCopy({ photo_id = "1" })
+        end)
+        assert.has_error(function()
+            Handler.createVirtualCopy({ photo_id = "1", copy_name = "" })
+        end)
+        assert.has_error(function()
+            Handler.createVirtualCopy({ photo_id = "1", copy_name = string.rep("x", 256) })
+        end)
+
+        assert.is_nil(catalog.getSelectedPhoto())
+        assert.are.equal(0, #catalog.getCreatedVirtualCopies())
+    end)
+
+    it("does not change the selection when the source is missing", function()
+        local catalog, Handler = setup({ photos = {} })
+
+        assert.has_error(function()
+            Handler.createVirtualCopy({
+                photo_id = "missing",
+                copy_name = "StylePilot Preview",
+            })
+        end)
+
+        assert.is_nil(catalog.getSelectedPhoto())
+        assert.are.equal(0, #catalog.getCreatedVirtualCopies())
+    end)
+end)
+
 describe("HandlerDevelop.setDevelopSettings", function()
     it("applies settings to the photo", function()
         local p = helper.fakePhoto({ id = "1", path = "/a.jpg" })

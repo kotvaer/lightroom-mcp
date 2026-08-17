@@ -1,5 +1,9 @@
 # Lightroom Classic MCP Server
 
+> **StylePilot fork:** this branch adds safety-oriented Lightroom tools used by
+> StylePilot, beginning with `create_virtual_copy`. The original project and
+> MIT license remain credited in the repository history and `LICENSE`.
+
 Lets Claude (and other AI assistants) talk to your **Adobe Lightroom Classic** photo catalog. Search photos, set ratings, edit develop settings, manage collections, import/export — all by chatting.
 
 [![npm](https://img.shields.io/npm/v/@mskalski/lightroom-mcp.svg)](https://www.npmjs.com/package/@mskalski/lightroom-mcp)
@@ -166,6 +170,7 @@ If you'd rather drop the plugin in by hand:
 | `list_develop_presets` | Discover available Develop presets. |
 | `apply_develop_preset` | Apply a named preset to photos. |
 | `copy_develop_settings` | Copy develop settings between photos. |
+| `create_virtual_copy` | Create one named virtual copy and return its catalog ID. |
 | `set_develop_settings` | Write SDK setting key/values directly. |
 
 Full schemas and parameter docs: [`server/src/list-tools-handler.ts`](server/src/list-tools-handler.ts).

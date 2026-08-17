@@ -18,12 +18,13 @@ const EXPECTED_TOOL_NAMES = [
   'list_develop_presets',
   'apply_develop_preset',
   'copy_develop_settings',
+  'create_virtual_copy',
   'set_develop_settings',
 ] as const;
 
 describe('TOOL_DEFINITIONS', () => {
-  it('contains exactly 14 tools', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(14);
+  it('contains exactly 15 tools', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(15);
   });
 
   it('tool names are unique', () => {
@@ -83,6 +84,7 @@ describe('tool required fields', () => {
     ['export_photos', ['photo_ids', 'destination']],
     ['apply_develop_preset', ['photo_ids', 'preset_name']],
     ['copy_develop_settings', ['source_id', 'target_ids']],
+    ['create_virtual_copy', ['photo_id', 'copy_name']],
     ['set_develop_settings', ['photo_id', 'settings']],
   ])('%s requires %j', (name, required) => {
     expect(toolRequired(name)).toEqual(required);

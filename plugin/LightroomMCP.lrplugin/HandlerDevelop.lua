@@ -278,6 +278,44 @@ function DevelopHandler.copyDevelopSettings(args)
     }
 end
 
+function DevelopHandler.createVirtualCopy(args)
+    requireString(args.photo_id, "photo_id")
+    requireString(args.copy_name, "copy_name")
+    if #args.copy_name > 255 then
+        error("copy_name must contain at most 255 characters")
+    end
+
+    local catalog = LrApplication.activeCatalog()
+    local source = PhotoLookup.resolveOne(catalog, args.photo_id)
+    if not source then
+        error("Photo not found: " .. args.photo_id)
+    end
+
+    -- Lightroom's SDK only creates virtual copies for the current selection.
+    -- Narrow the selection to the resolved source so an unrelated filmstrip
+    -- selection can never receive a copy by accident.
+    catalog:setSelectedPhotos(source, {})
+    local copies = catalog:createVirtualCopies(args.copy_name)
+    if not copies or #copies ~= 1 then
+        error("Expected Lightroom to create exactly one virtual copy")
+    end
+
+    local virtualCopy = copies[1]
+    Log.info(string.format("Created virtual copy %s from photo %s",
+        tostring(virtualCopy.localIdentifier), tostring(source.localIdentifier)))
+
+    return {
+        success = true,
+        source_photo_id = source.localIdentifier,
+        virtual_copy = {
+            id = virtualCopy.localIdentifier,
+            path = virtualCopy:getRawMetadata('path'),
+            filename = virtualCopy:getFormattedMetadata('fileName'),
+            copy_name = args.copy_name,
+        },
+    }
+end
+
 function DevelopHandler.setDevelopSettings(args)
     requireString(args.photo_id, "photo_id")
     requireDevelopSettingsObject(args.settings)

@@ -130,6 +130,8 @@ function M.fakeCatalog(opts)
     local collectionSets = opts.collectionSets or {}
     local createdCollections = {}
     local createdKeywords = {}
+    local createdVirtualCopies = {}
+    local selectedPhoto = nil
     local readAccessCount = 0
     local writeAccessCount = 0
     -- Tracks whether a catalog query (getTargetPhotos/findPhotos/getAllPhotos)
@@ -215,6 +217,22 @@ function M.fakeCatalog(opts)
             end
             return nil
         end,
+        setSelectedPhotos = function(_, activePhoto)
+            selectedPhoto = activePhoto
+        end,
+        createVirtualCopies = function(_, copyName)
+            if not selectedPhoto then return {} end
+            local copy = M.fakePhoto({
+                id = "virtual-" .. tostring(#createdVirtualCopies + 1),
+                path = selectedPhoto:getRawMetadata('path'),
+                fileName = selectedPhoto:getFormattedMetadata('fileName'),
+                copyName = copyName,
+            })
+            table.insert(createdVirtualCopies, copy)
+            table.insert(photos, copy)
+            selectedPhoto = copy
+            return { copy }
+        end,
         createCollection = function(_, name)
             local c = M.fakeCollection(name, {})
             table.insert(createdCollections, c)
@@ -233,6 +251,8 @@ function M.fakeCatalog(opts)
         end,
         getCreatedCollections = function() return createdCollections end,
         getCreatedKeywords = function() return createdKeywords end,
+        getCreatedVirtualCopies = function() return createdVirtualCopies end,
+        getSelectedPhoto = function() return selectedPhoto end,
         getReadAccessCount = function() return readAccessCount end,
         getWriteAccessCount = function() return writeAccessCount end,
     }

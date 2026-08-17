@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Automaat/lightroom-mcp"
+    "url": "https://github.com/kotvaer/lightroom-mcp"
   },
   "license": "MIT",
   "keywords": [
@@ -85,6 +85,10 @@
     {
       "name": "copy_develop_settings",
       "description": "Copy Develop settings from one photo to others."
+    },
+    {
+      "name": "create_virtual_copy",
+      "description": "Create one named virtual copy and return its catalog ID."
     },
     {
       "name": "set_develop_settings",

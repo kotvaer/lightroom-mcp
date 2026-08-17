@@ -3,11 +3,11 @@ return {
     LrSdkMinimumVersion = 8.0,
 
     LrToolkitIdentifier = 'com.lightroom.mcp',
-    LrPluginName = "Lightroom MCP",
+    LrPluginName = "Lightroom MCP — StylePilot",
 
-    LrPluginInfoUrl = "https://github.com/automaat/lightroom-mcp",
+    LrPluginInfoUrl = "https://github.com/kotvaer/lightroom-mcp",
 
-    VERSION = { major=0, minor=9, revision=0, build=0 },
+    VERSION = { major=0, minor=9, revision=0, build=1 },
 
     LrPluginInfoProvider = 'PluginInfoProvider.lua',
     LrInitPlugin = 'PluginInit.lua',
