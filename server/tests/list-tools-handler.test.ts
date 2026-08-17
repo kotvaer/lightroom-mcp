@@ -26,12 +26,14 @@ const EXPECTED_TOOL_NAMES = [
   'create_develop_snapshot',
   'restore_develop_snapshot',
   'set_stylepilot_develop_settings',
+  'request_stylepilot_approval',
+  'get_stylepilot_approval',
   'set_develop_settings',
 ] as const;
 
 describe('TOOL_DEFINITIONS', () => {
-  it('contains exactly 18 tools', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(18);
+  it('contains exactly 20 tools', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(20);
   });
 
   it('tool names are unique', () => {
@@ -95,6 +97,20 @@ describe('tool required fields', () => {
     ['create_develop_snapshot', ['photo_id', 'snapshot_name']],
     ['restore_develop_snapshot', ['photo_id', 'snapshot_name']],
     ['set_stylepilot_develop_settings', ['photo_id', 'history_name', 'settings']],
+    [
+      'request_stylepilot_approval',
+      [
+        'request_id',
+        'photo_id',
+        'filename',
+        'style_name',
+        'suitability_score',
+        'recommended_strength',
+        'settings',
+        'risks',
+      ],
+    ],
+    ['get_stylepilot_approval', ['request_id']],
     ['set_develop_settings', ['photo_id', 'settings']],
   ])('%s requires %j', (name, required) => {
     expect(toolRequired(name)).toEqual(required);

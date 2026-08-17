@@ -103,6 +103,14 @@
       "description": "Apply range-checked StylePilot settings to a verified virtual copy."
     },
     {
+      "name": "request_stylepilot_approval",
+      "description": "Open the native StylePilot review panel for a request-bound approval."
+    },
+    {
+      "name": "get_stylepilot_approval",
+      "description": "Read the decision for one StylePilot approval request."
+    },
+    {
       "name": "set_develop_settings",
       "description": "Set Develop settings directly on a photo."
     }

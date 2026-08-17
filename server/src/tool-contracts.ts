@@ -472,6 +472,59 @@ export const TOOL_CONTRACTS: ToolContract[] = [
     },
   },
   {
+    name: "request_stylepilot_approval",
+    luaHandler: "HandlerStylePilot.requestApproval",
+    description:
+      "Open or focus the native Lightroom StylePilot review panel for a request-bound edit approval",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+        photo_id: { type: "string", minLength: 1, maxLength: 255 },
+        filename: { type: "string", minLength: 1, maxLength: 500 },
+        style_name: { type: "string", minLength: 1, maxLength: 255 },
+        suitability_score: { type: "number", minimum: 0, maximum: 100 },
+        recommended_strength: { type: "number", minimum: 0, maximum: 1 },
+        settings: {
+          type: "object",
+          properties: stylePilotDevelopSettingsProperties,
+          additionalProperties: false,
+          minProperties: 1,
+          maxProperties: 20,
+        },
+        risks: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 500 },
+          maxItems: 10,
+        },
+      },
+      required: [
+        "request_id",
+        "photo_id",
+        "filename",
+        "style_name",
+        "suitability_score",
+        "recommended_strength",
+        "settings",
+        "risks",
+      ],
+    },
+  },
+  {
+    name: "get_stylepilot_approval",
+    luaHandler: "HandlerStylePilot.getApproval",
+    description: "Read the approved, rejected, pending, or unknown state for one request ID",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+      },
+      required: ["request_id"],
+    },
+  },
+  {
     name: "set_develop_settings",
     luaHandler: "HandlerDevelop.setDevelopSettings",
     description:

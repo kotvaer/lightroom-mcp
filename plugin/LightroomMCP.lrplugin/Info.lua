@@ -7,7 +7,7 @@ return {
 
     LrPluginInfoUrl = "https://github.com/kotvaer/lightroom-mcp",
 
-    VERSION = { major=0, minor=9, revision=0, build=2 },
+    VERSION = { major=0, minor=9, revision=0, build=3 },
 
     LrPluginInfoProvider = 'PluginInfoProvider.lua',
     LrInitPlugin = 'PluginInit.lua',
@@ -22,6 +22,10 @@ return {
         {
             title = "Lightroom MCP — Show Status",
             file = "MenuShowStatus.lua",
+        },
+        {
+            title = "StylePilot — Open Review Panel",
+            file = "MenuStylePilotPanel.lua",
         },
     },
 }

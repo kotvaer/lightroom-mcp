@@ -1,0 +1,13 @@
+local StylePilotPanel = require 'StylePilotPanel'
+
+local Handler = {}
+
+function Handler.requestApproval(args)
+    return StylePilotPanel.requestApproval(args)
+end
+
+function Handler.getApproval(args)
+    return StylePilotPanel.getApproval(args)
+end
+
+return Handler
