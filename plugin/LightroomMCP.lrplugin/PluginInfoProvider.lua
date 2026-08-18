@@ -144,6 +144,7 @@ local DISPATCH = {
     restore_develop_snapshot = HandlerDevelop.restoreDevelopSnapshot,
     set_stylepilot_develop_settings = HandlerDevelop.setStylePilotDevelopSettings,
     request_stylepilot_approval = HandlerStylePilot.requestApproval,
+    request_stylepilot_calibration_approval = HandlerStylePilot.requestCalibrationApproval,
     get_stylepilot_approval = HandlerStylePilot.getApproval,
     cancel_stylepilot_approval = HandlerStylePilot.cancelApproval,
     set_develop_settings = HandlerDevelop.setDevelopSettings,

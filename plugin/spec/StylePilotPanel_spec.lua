@@ -77,6 +77,23 @@ local function approvalArgs(requestId)
     }
 end
 
+local function calibrationArgs(requestId)
+    return {
+        request_id = requestId or "calibration-1",
+        experiment_id = "basic-tone-smoke",
+        experiment_name = "Basic tone smoke",
+        photo_ids = { "37246", "37247" },
+        filenames = { "one.dng", "two.dng" },
+        baseline_repeats = 3,
+        sample_count = 6,
+        render_count = 20,
+        parameters = {
+            { parameter = "Contrast2012", values = { -20, 0, 20 } },
+        },
+        risks = { "Creates two virtual copies." },
+    }
+end
+
 describe("StylePilotPanel", function()
     it("opens a blocking floating review panel and returns pending", function()
         local Panel, getDialog = setup()
@@ -87,16 +104,16 @@ describe("StylePilotPanel", function()
         assert.is_true(result.success)
         assert.are.equal("request-1", result.request_id)
         assert.are.equal("pending", result.status)
-        assert.are.equal("StylePilot — Review Edit", dialog.title)
+        assert.are.equal("StylePilot — Review Operation", dialog.title)
         assert.is_true(dialog.blockTask)
         assert.is_not_nil(findButton(dialog.contents, "Reject"))
-        assert.is_not_nil(findButton(dialog.contents, "Approve virtual-copy edit"))
+        assert.is_not_nil(findButton(dialog.contents, "Approve virtual-copy operation"))
     end)
 
     it("binds approval to the request id", function()
         local Panel, getDialog = setup()
         Panel.requestApproval(approvalArgs("request-approve"))
-        local approve = findButton(getDialog().contents, "Approve virtual-copy edit")
+        local approve = findButton(getDialog().contents, "Approve virtual-copy operation")
 
         approve.action()
         local result = Panel.getApproval({ request_id = "request-approve" })
@@ -170,5 +187,38 @@ describe("StylePilotPanel", function()
 
         assert.has_error(function() Panel.requestApproval(invalidScore) end)
         assert.has_error(function() Panel.requestApproval(invalidSettings) end)
+    end)
+
+    it("opens one request-bound batch calibration approval", function()
+        local Panel, getDialog = setup()
+
+        local result = Panel.requestCalibrationApproval(calibrationArgs())
+        local approve = findButton(
+            getDialog().contents,
+            "Approve virtual-copy operation"
+        )
+        approve.action()
+
+        assert.is_true(result.success)
+        assert.are.equal("pending", result.status)
+        assert.are.equal(
+            "approved",
+            Panel.getApproval({ request_id = "calibration-1" }).status
+        )
+    end)
+
+    it("rejects inconsistent or out-of-range calibration scope", function()
+        local Panel = setup()
+        local wrongCount = calibrationArgs("wrong-count")
+        wrongCount.sample_count = 5
+        local unsafeValue = calibrationArgs("unsafe-value")
+        unsafeValue.parameters[1].values = { -20, 0, 101 }
+
+        assert.has_error(function()
+            Panel.requestCalibrationApproval(wrongCount)
+        end)
+        assert.has_error(function()
+            Panel.requestCalibrationApproval(unsafeValue)
+        end)
     end)
 end)

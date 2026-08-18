@@ -107,6 +107,10 @@
       "description": "Open the native StylePilot review panel for a request-bound approval."
     },
     {
+      "name": "request_stylepilot_calibration_approval",
+      "description": "Open the native StylePilot review panel for a bounded actuator calibration."
+    },
+    {
       "name": "get_stylepilot_approval",
       "description": "Read the decision for one StylePilot approval request."
     },

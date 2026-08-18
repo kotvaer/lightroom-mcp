@@ -27,14 +27,15 @@ const EXPECTED_TOOL_NAMES = [
   'restore_develop_snapshot',
   'set_stylepilot_develop_settings',
   'request_stylepilot_approval',
+  'request_stylepilot_calibration_approval',
   'get_stylepilot_approval',
   'cancel_stylepilot_approval',
   'set_develop_settings',
 ] as const;
 
 describe('TOOL_DEFINITIONS', () => {
-  it('contains exactly 21 tools', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(21);
+  it('contains exactly 22 tools', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(22);
   });
 
   it('tool names are unique', () => {
@@ -108,6 +109,21 @@ describe('tool required fields', () => {
         'suitability_score',
         'recommended_strength',
         'settings',
+        'risks',
+      ],
+    ],
+    [
+      'request_stylepilot_calibration_approval',
+      [
+        'request_id',
+        'experiment_id',
+        'experiment_name',
+        'photo_ids',
+        'filenames',
+        'baseline_repeats',
+        'sample_count',
+        'render_count',
+        'parameters',
         'risks',
       ],
     ],

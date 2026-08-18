@@ -6,6 +6,10 @@ function Handler.requestApproval(args)
     return StylePilotPanel.requestApproval(args)
 end
 
+function Handler.requestCalibrationApproval(args)
+    return StylePilotPanel.requestCalibrationApproval(args)
+end
+
 function Handler.getApproval(args)
     return StylePilotPanel.getApproval(args)
 end

@@ -512,6 +512,75 @@ export const TOOL_CONTRACTS: ToolContract[] = [
     },
   },
   {
+    name: "request_stylepilot_calibration_approval",
+    luaHandler: "HandlerStylePilot.requestCalibrationApproval",
+    description:
+      "Open or focus the native Lightroom review panel for one bounded StylePilot actuator calibration",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+        experiment_id: { type: "string", minLength: 1, maxLength: 100 },
+        experiment_name: { type: "string", minLength: 1, maxLength: 255 },
+        photo_ids: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 255 },
+          minItems: 1,
+          maxItems: 20,
+        },
+        filenames: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 500 },
+          minItems: 1,
+          maxItems: 20,
+        },
+        baseline_repeats: { type: "integer", minimum: 2, maximum: 5 },
+        sample_count: { type: "integer", minimum: 1, maximum: 1200 },
+        render_count: { type: "integer", minimum: 1, maximum: 2520 },
+        parameters: {
+          type: "array",
+          minItems: 1,
+          maxItems: 11,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              parameter: {
+                type: "string",
+                enum: Object.keys(STYLEPILOT_DEVELOP_PARAMETER_RANGES),
+              },
+              values: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 1,
+                maxItems: 21,
+              },
+            },
+            required: ["parameter", "values"],
+          },
+        },
+        risks: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 500 },
+          maxItems: 10,
+        },
+      },
+      required: [
+        "request_id",
+        "experiment_id",
+        "experiment_name",
+        "photo_ids",
+        "filenames",
+        "baseline_repeats",
+        "sample_count",
+        "render_count",
+        "parameters",
+        "risks",
+      ],
+    },
+  },
+  {
     name: "get_stylepilot_approval",
     luaHandler: "HandlerStylePilot.getApproval",
     description: "Read the approved, rejected, pending, or unknown state for one request ID",
