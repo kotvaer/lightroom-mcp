@@ -525,6 +525,20 @@ export const TOOL_CONTRACTS: ToolContract[] = [
     },
   },
   {
+    name: "cancel_stylepilot_approval",
+    luaHandler: "HandlerStylePilot.cancelApproval",
+    description:
+      "Cancel and close one pending StylePilot approval after its client stops waiting",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+      },
+      required: ["request_id"],
+    },
+  },
+  {
     name: "set_develop_settings",
     luaHandler: "HandlerDevelop.setDevelopSettings",
     description:

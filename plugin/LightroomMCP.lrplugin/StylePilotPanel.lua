@@ -284,6 +284,26 @@ function Panel.getApproval(args)
     }
 end
 
+function Panel.cancelApproval(args)
+    requireString(args.request_id, "request_id", 100)
+    if not currentRequest or currentRequest.request_id ~= args.request_id then
+        return {
+            success = true,
+            request_id = args.request_id,
+            status = "unknown",
+        }
+    end
+    if currentRequest.status == "pending" then
+        markDecision("rejected", "client_cancelled")
+    end
+    return {
+        success = true,
+        request_id = currentRequest.request_id,
+        status = currentRequest.status,
+        reason = currentRequest.reason,
+    }
+end
+
 function Panel.show()
     startPanel()
 end

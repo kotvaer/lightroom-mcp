@@ -28,7 +28,6 @@ end
 
 local function setup()
     local capturedDialog
-    local closeCount = 0
     helper.installImport({
         LrBinding = {
             makePropertyTable = function() return {} end,
@@ -40,7 +39,6 @@ local function setup()
                     args.onShow({
                         toFront = function() end,
                         close = function()
-                            closeCount = closeCount + 1
                             if args.windowWillClose then args.windowWillClose() end
                         end,
                     })
@@ -63,7 +61,7 @@ local function setup()
     package.loaded.Log = nil
     package.loaded.StylePilotPanel = nil
     local Panel = require 'StylePilotPanel'
-    return Panel, function() return capturedDialog end, function() return closeCount end
+    return Panel, function() return capturedDialog end
 end
 
 local function approvalArgs(requestId)
@@ -121,6 +119,21 @@ describe("StylePilotPanel", function()
 
         assert.are.equal("rejected", result.status)
         assert.are.equal("user_rejected", result.reason)
+    end)
+
+    it("cancels a pending request when its client times out", function()
+        local Panel, getDialog = setup()
+        Panel.requestApproval(approvalArgs("request-timeout"))
+
+        local result = Panel.cancelApproval({ request_id = "request-timeout" })
+
+        assert.are.equal("rejected", result.status)
+        assert.are.equal("client_cancelled", result.reason)
+        assert.are.equal(
+            "unknown",
+            Panel.cancelApproval({ request_id = "different-request" }).status
+        )
+        assert.is_not_nil(getDialog())
     end)
 
     it("treats closing a pending review as rejection", function()

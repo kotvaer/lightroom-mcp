@@ -10,4 +10,8 @@ function Handler.getApproval(args)
     return StylePilotPanel.getApproval(args)
 end
 
+function Handler.cancelApproval(args)
+    return StylePilotPanel.cancelApproval(args)
+end
+
 return Handler

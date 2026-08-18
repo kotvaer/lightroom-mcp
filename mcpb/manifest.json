@@ -111,6 +111,10 @@
       "description": "Read the decision for one StylePilot approval request."
     },
     {
+      "name": "cancel_stylepilot_approval",
+      "description": "Cancel a pending StylePilot approval after its client stops waiting."
+    },
+    {
       "name": "set_develop_settings",
       "description": "Set Develop settings directly on a photo."
     }
