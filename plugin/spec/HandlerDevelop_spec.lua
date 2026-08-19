@@ -207,6 +207,190 @@ describe("HandlerDevelop.copyDevelopSettings", function()
     end)
 end)
 
+describe("HandlerDevelop.createVirtualCopy", function()
+    it("creates exactly one named copy from the resolved source", function()
+        local source = helper.fakePhoto({
+            id = "1", path = "/a.jpg", fileName = "a.jpg",
+        })
+        local catalog, Handler = setup({ photos = { source } })
+
+        local r = Handler.createVirtualCopy({
+            photo_id = "1",
+            copy_name = "StylePilot Preview",
+        })
+
+        assert.is_true(r.success)
+        assert.are.equal("1", r.source_photo_id)
+        assert.are.equal("virtual-1", r.virtual_copy.id)
+        assert.are.equal("/a.jpg", r.virtual_copy.path)
+        assert.are.equal("a.jpg", r.virtual_copy.filename)
+        assert.are.equal("StylePilot Preview", r.virtual_copy.copy_name)
+        assert.are.equal(1, #catalog.getCreatedVirtualCopies())
+        assert.are.equal("virtual-1", catalog.getSelectedPhoto().localIdentifier)
+    end)
+
+    it("validates arguments before changing the selection", function()
+        local source = helper.fakePhoto({
+            id = "1", path = "/a.jpg", fileName = "a.jpg",
+        })
+        local catalog, Handler = setup({ photos = { source } })
+
+        assert.has_error(function()
+            Handler.createVirtualCopy({ copy_name = "Preview" })
+        end)
+        assert.has_error(function()
+            Handler.createVirtualCopy({ photo_id = "1" })
+        end)
+        assert.has_error(function()
+            Handler.createVirtualCopy({ photo_id = "1", copy_name = "" })
+        end)
+        assert.has_error(function()
+            Handler.createVirtualCopy({ photo_id = "1", copy_name = string.rep("x", 256) })
+        end)
+
+        assert.is_nil(catalog.getSelectedPhoto())
+        assert.are.equal(0, #catalog.getCreatedVirtualCopies())
+    end)
+
+    it("does not change the selection when the source is missing", function()
+        local catalog, Handler = setup({ photos = {} })
+
+        assert.has_error(function()
+            Handler.createVirtualCopy({
+                photo_id = "missing",
+                copy_name = "StylePilot Preview",
+            })
+        end)
+
+        assert.is_nil(catalog.getSelectedPhoto())
+        assert.are.equal(0, #catalog.getCreatedVirtualCopies())
+    end)
+end)
+
+describe("HandlerDevelop StylePilot safety tools", function()
+    it("creates a uniquely named snapshot on a virtual copy", function()
+        local p = helper.fakePhoto({
+            id = "virtual-1",
+            path = "/a.jpg",
+            isVirtualCopy = true,
+            developSettings = { Exposure2012 = 0.25 },
+        })
+        local catalog, Handler = setup({ photos = { p } })
+
+        local r = Handler.createDevelopSnapshot({
+            photo_id = "virtual-1",
+            snapshot_name = "StylePilot Before abc",
+        })
+
+        assert.is_true(r.success)
+        assert.are.equal("virtual-1", r.photo_id)
+        assert.are.equal("snapshot-1", r.snapshot.id)
+        assert.are.equal("global-snapshot-1", r.snapshot.global_id)
+        assert.are.equal("StylePilot Before abc", r.snapshot.name)
+        assert.are.equal(1, catalog.getWriteAccessCount())
+    end)
+
+    it("refuses snapshots and guarded writes on an original photo", function()
+        local p = helper.fakePhoto({ id = "original-1", path = "/a.jpg" })
+        local catalog, Handler = setup({ photos = { p } })
+
+        assert.has_error(function()
+            Handler.createDevelopSnapshot({
+                photo_id = "original-1",
+                snapshot_name = "StylePilot Before abc",
+            })
+        end, "Refusing StylePilot write: photo is not a virtual copy: original-1")
+        assert.has_error(function()
+            Handler.setStylePilotDevelopSettings({
+                photo_id = "original-1",
+                history_name = "StylePilot Preview",
+                settings = { Exposure2012 = 0.5 },
+            })
+        end, "Refusing StylePilot write: photo is not a virtual copy: original-1")
+
+        assert.are.equal(0, catalog.getWriteAccessCount())
+    end)
+
+    it("strictly validates StylePilot settings before catalog access", function()
+        local p = helper.fakePhoto({
+            id = "virtual-1", path = "/a.jpg", isVirtualCopy = true,
+        })
+        local catalog, Handler = setup({ photos = { p } })
+
+        local invalidSettings = {
+            { ImaginarySlider = 1 },
+            { Exposure2012 = "0.5" },
+            { Exposure2012 = 6 },
+            { Exposure2012 = 0 / 0 },
+        }
+        for _, settings in ipairs(invalidSettings) do
+            assert.has_error(function()
+                Handler.setStylePilotDevelopSettings({
+                    photo_id = "virtual-1",
+                    history_name = "StylePilot Preview",
+                    settings = settings,
+                })
+            end)
+        end
+
+        assert.are.equal(0, catalog.getWriteAccessCount())
+        assert.is_nil(p:getRawMetadata("__appliedSettings"))
+    end)
+
+    it("applies strict settings with a named history step", function()
+        local p = helper.fakePhoto({
+            id = "virtual-1", path = "/a.jpg", isVirtualCopy = true,
+        })
+        local _, Handler = setup({ photos = { p } })
+
+        local r = Handler.setStylePilotDevelopSettings({
+            photo_id = "virtual-1",
+            history_name = "StylePilot Preview",
+            settings = { Exposure2012 = 0.75, Vibrance = 20 },
+        })
+
+        assert.is_true(r.success)
+        assert.are.same(
+            { Exposure2012 = 0.75, Vibrance = 20 },
+            p:getRawMetadata("__appliedSettings")
+        )
+        assert.are.equal("StylePilot Preview", p:getRawMetadata("__historyName"))
+    end)
+
+    it("restores the named snapshot after settings change", function()
+        local p = helper.fakePhoto({
+            id = "virtual-1",
+            path = "/a.jpg",
+            isVirtualCopy = true,
+            developSettings = { Exposure2012 = 0.25, Vibrance = 5 },
+        })
+        local catalog, Handler = setup({ photos = { p } })
+
+        Handler.createDevelopSnapshot({
+            photo_id = "virtual-1",
+            snapshot_name = "StylePilot Before abc",
+        })
+        Handler.setStylePilotDevelopSettings({
+            photo_id = "virtual-1",
+            history_name = "StylePilot Preview",
+            settings = { Exposure2012 = 1.5, Vibrance = 30 },
+        })
+        local r = Handler.restoreDevelopSnapshot({
+            photo_id = "virtual-1",
+            snapshot_name = "StylePilot Before abc",
+        })
+
+        assert.is_true(r.success)
+        assert.are.equal("snapshot-1", r.snapshot_id)
+        assert.are.same(
+            { Exposure2012 = 0.25, Vibrance = 5 },
+            p:getDevelopSettings()
+        )
+        assert.are.equal("snapshot-1", p:getRawMetadata("__appliedSnapshot"))
+        assert.are.equal(p, catalog.getSelectedPhoto())
+    end)
+end)
+
 describe("HandlerDevelop.setDevelopSettings", function()
     it("applies settings to the photo", function()
         local p = helper.fakePhoto({ id = "1", path = "/a.jpg" })

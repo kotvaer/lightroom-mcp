@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Automaat/lightroom-mcp"
+    "url": "https://github.com/kotvaer/lightroom-mcp"
   },
   "license": "MIT",
   "keywords": [
@@ -85,6 +85,38 @@
     {
       "name": "copy_develop_settings",
       "description": "Copy Develop settings from one photo to others."
+    },
+    {
+      "name": "create_virtual_copy",
+      "description": "Create one named virtual copy and return its catalog ID."
+    },
+    {
+      "name": "create_develop_snapshot",
+      "description": "Create a recovery snapshot on a verified virtual copy."
+    },
+    {
+      "name": "restore_develop_snapshot",
+      "description": "Restore a named recovery snapshot on a verified virtual copy."
+    },
+    {
+      "name": "set_stylepilot_develop_settings",
+      "description": "Apply range-checked StylePilot settings to a verified virtual copy."
+    },
+    {
+      "name": "request_stylepilot_approval",
+      "description": "Open the native StylePilot review panel for a request-bound approval."
+    },
+    {
+      "name": "request_stylepilot_calibration_approval",
+      "description": "Open the native StylePilot review panel for a bounded actuator calibration."
+    },
+    {
+      "name": "get_stylepilot_approval",
+      "description": "Read the decision for one StylePilot approval request."
+    },
+    {
+      "name": "cancel_stylepilot_approval",
+      "description": "Cancel a pending StylePilot approval after its client stops waiting."
     },
     {
       "name": "set_develop_settings",

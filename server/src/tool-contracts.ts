@@ -93,6 +93,20 @@ export const DEVELOP_SETTING_KEYS = [
   "CropAngle",
 ] as const;
 
+export const STYLEPILOT_DEVELOP_PARAMETER_RANGES = {
+  Exposure2012: [-5, 5],
+  Contrast2012: [-100, 100],
+  Highlights2012: [-100, 100],
+  Shadows2012: [-100, 100],
+  Whites2012: [-100, 100],
+  Blacks2012: [-100, 100],
+  Texture: [-100, 100],
+  Clarity2012: [-100, 100],
+  Dehaze: [-100, 100],
+  Vibrance: [-100, 100],
+  Saturation: [-100, 100],
+} as const;
+
 const stringArray = (description: string, maxItems?: number) => ({
   type: "array",
   items: { type: "string" },
@@ -116,6 +130,12 @@ const developSettingValueSchema = {
 
 const developSettingsProperties = Object.fromEntries(
   DEVELOP_SETTING_KEYS.map((key) => [key, developSettingValueSchema]),
+);
+
+const stylePilotDevelopSettingsProperties = Object.fromEntries(
+  Object.entries(STYLEPILOT_DEVELOP_PARAMETER_RANGES).map(
+    ([key, [minimum, maximum]]) => [key, { type: "number", minimum, maximum }],
+  ),
 );
 
 export const TOOL_CONTRACTS: ToolContract[] = [
@@ -346,6 +366,245 @@ export const TOOL_CONTRACTS: ToolContract[] = [
         },
       },
       required: ["source_id", "target_ids"],
+    },
+  },
+  {
+    name: "create_virtual_copy",
+    luaHandler: "HandlerDevelop.createVirtualCopy",
+    description:
+      "Create one named Lightroom virtual copy from a source photo and return the new catalog photo identifier",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        photo_id: {
+          type: "string",
+          minLength: 1,
+          description: "Source photo ID or file path",
+        },
+        copy_name: {
+          type: "string",
+          minLength: 1,
+          maxLength: 255,
+          description: "Name assigned to the new virtual copy",
+        },
+      },
+      required: ["photo_id", "copy_name"],
+    },
+  },
+  {
+    name: "create_develop_snapshot",
+    luaHandler: "HandlerDevelop.createDevelopSnapshot",
+    description:
+      "Create a uniquely named recovery snapshot on a Lightroom virtual copy before StylePilot writes Develop settings",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        photo_id: {
+          type: "string",
+          minLength: 1,
+          description: "Virtual-copy photo ID or file path",
+        },
+        snapshot_name: {
+          type: "string",
+          minLength: 1,
+          maxLength: 255,
+          description: "Unique recovery snapshot name",
+        },
+      },
+      required: ["photo_id", "snapshot_name"],
+    },
+  },
+  {
+    name: "restore_develop_snapshot",
+    luaHandler: "HandlerDevelop.restoreDevelopSnapshot",
+    description:
+      "Restore a named recovery snapshot on a Lightroom virtual copy after a failed StylePilot write",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        photo_id: {
+          type: "string",
+          minLength: 1,
+          description: "Virtual-copy photo ID or file path",
+        },
+        snapshot_name: {
+          type: "string",
+          minLength: 1,
+          maxLength: 255,
+          description: "Recovery snapshot name returned by create_develop_snapshot",
+        },
+      },
+      required: ["photo_id", "snapshot_name"],
+    },
+  },
+  {
+    name: "set_stylepilot_develop_settings",
+    luaHandler: "HandlerDevelop.setStylePilotDevelopSettings",
+    description:
+      "Apply StylePilot's numeric, range-checked Develop subset to a verified Lightroom virtual copy",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        photo_id: {
+          type: "string",
+          minLength: 1,
+          description: "Virtual-copy photo ID or file path",
+        },
+        history_name: {
+          type: "string",
+          minLength: 1,
+          maxLength: 255,
+          description: "Lightroom History panel entry",
+        },
+        settings: {
+          type: "object",
+          properties: stylePilotDevelopSettingsProperties,
+          additionalProperties: false,
+          minProperties: 1,
+          description: "Strictly range-checked StylePilot Develop settings",
+        },
+      },
+      required: ["photo_id", "history_name", "settings"],
+    },
+  },
+  {
+    name: "request_stylepilot_approval",
+    luaHandler: "HandlerStylePilot.requestApproval",
+    description:
+      "Open or focus the native Lightroom StylePilot review panel for a request-bound edit approval",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+        photo_id: { type: "string", minLength: 1, maxLength: 255 },
+        filename: { type: "string", minLength: 1, maxLength: 500 },
+        style_name: { type: "string", minLength: 1, maxLength: 255 },
+        suitability_score: { type: "number", minimum: 0, maximum: 100 },
+        recommended_strength: { type: "number", minimum: 0, maximum: 1 },
+        settings: {
+          type: "object",
+          properties: stylePilotDevelopSettingsProperties,
+          additionalProperties: false,
+          minProperties: 1,
+          maxProperties: 20,
+        },
+        risks: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 500 },
+          maxItems: 10,
+        },
+      },
+      required: [
+        "request_id",
+        "photo_id",
+        "filename",
+        "style_name",
+        "suitability_score",
+        "recommended_strength",
+        "settings",
+        "risks",
+      ],
+    },
+  },
+  {
+    name: "request_stylepilot_calibration_approval",
+    luaHandler: "HandlerStylePilot.requestCalibrationApproval",
+    description:
+      "Open or focus the native Lightroom review panel for one bounded StylePilot actuator calibration",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+        experiment_id: { type: "string", minLength: 1, maxLength: 100 },
+        experiment_name: { type: "string", minLength: 1, maxLength: 255 },
+        photo_ids: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 255 },
+          minItems: 1,
+          maxItems: 20,
+        },
+        filenames: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 500 },
+          minItems: 1,
+          maxItems: 20,
+        },
+        baseline_repeats: { type: "integer", minimum: 2, maximum: 5 },
+        sample_count: { type: "integer", minimum: 1, maximum: 1200 },
+        render_count: { type: "integer", minimum: 1, maximum: 2520 },
+        parameters: {
+          type: "array",
+          minItems: 1,
+          maxItems: 11,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              parameter: {
+                type: "string",
+                enum: Object.keys(STYLEPILOT_DEVELOP_PARAMETER_RANGES),
+              },
+              values: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 1,
+                maxItems: 21,
+              },
+            },
+            required: ["parameter", "values"],
+          },
+        },
+        risks: {
+          type: "array",
+          items: { type: "string", minLength: 1, maxLength: 500 },
+          maxItems: 10,
+        },
+      },
+      required: [
+        "request_id",
+        "experiment_id",
+        "experiment_name",
+        "photo_ids",
+        "filenames",
+        "baseline_repeats",
+        "sample_count",
+        "render_count",
+        "parameters",
+        "risks",
+      ],
+    },
+  },
+  {
+    name: "get_stylepilot_approval",
+    luaHandler: "HandlerStylePilot.getApproval",
+    description: "Read the approved, rejected, pending, or unknown state for one request ID",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+      },
+      required: ["request_id"],
+    },
+  },
+  {
+    name: "cancel_stylepilot_approval",
+    luaHandler: "HandlerStylePilot.cancelApproval",
+    description:
+      "Cancel and close one pending StylePilot approval after its client stops waiting",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        request_id: { type: "string", minLength: 1, maxLength: 100 },
+      },
+      required: ["request_id"],
     },
   },
   {

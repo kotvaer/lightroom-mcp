@@ -2,7 +2,11 @@ import { describe, it, expect } from '@jest/globals';
 import fs from 'node:fs';
 import path from 'node:path';
 import { TOOL_DEFINITIONS, listToolsHandler } from '../src/list-tools-handler.js';
-import { DEVELOP_SETTING_KEYS, TOOL_CONTRACTS } from '../src/tool-contracts.js';
+import {
+  DEVELOP_SETTING_KEYS,
+  STYLEPILOT_DEVELOP_PARAMETER_RANGES,
+  TOOL_CONTRACTS,
+} from '../src/tool-contracts.js';
 
 const EXPECTED_TOOL_NAMES = [
   'search_photos',
@@ -18,12 +22,20 @@ const EXPECTED_TOOL_NAMES = [
   'list_develop_presets',
   'apply_develop_preset',
   'copy_develop_settings',
+  'create_virtual_copy',
+  'create_develop_snapshot',
+  'restore_develop_snapshot',
+  'set_stylepilot_develop_settings',
+  'request_stylepilot_approval',
+  'request_stylepilot_calibration_approval',
+  'get_stylepilot_approval',
+  'cancel_stylepilot_approval',
   'set_develop_settings',
 ] as const;
 
 describe('TOOL_DEFINITIONS', () => {
-  it('contains exactly 14 tools', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(14);
+  it('contains exactly 22 tools', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(22);
   });
 
   it('tool names are unique', () => {
@@ -83,6 +95,40 @@ describe('tool required fields', () => {
     ['export_photos', ['photo_ids', 'destination']],
     ['apply_develop_preset', ['photo_ids', 'preset_name']],
     ['copy_develop_settings', ['source_id', 'target_ids']],
+    ['create_virtual_copy', ['photo_id', 'copy_name']],
+    ['create_develop_snapshot', ['photo_id', 'snapshot_name']],
+    ['restore_develop_snapshot', ['photo_id', 'snapshot_name']],
+    ['set_stylepilot_develop_settings', ['photo_id', 'history_name', 'settings']],
+    [
+      'request_stylepilot_approval',
+      [
+        'request_id',
+        'photo_id',
+        'filename',
+        'style_name',
+        'suitability_score',
+        'recommended_strength',
+        'settings',
+        'risks',
+      ],
+    ],
+    [
+      'request_stylepilot_calibration_approval',
+      [
+        'request_id',
+        'experiment_id',
+        'experiment_name',
+        'photo_ids',
+        'filenames',
+        'baseline_repeats',
+        'sample_count',
+        'render_count',
+        'parameters',
+        'risks',
+      ],
+    ],
+    ['get_stylepilot_approval', ['request_id']],
+    ['cancel_stylepilot_approval', ['request_id']],
     ['set_develop_settings', ['photo_id', 'settings']],
   ])('%s requires %j', (name, required) => {
     expect(toolRequired(name)).toEqual(required);
@@ -138,6 +184,20 @@ describe('develop setting schema', () => {
     return [...match[1].matchAll(/^\s*"([^"]+)",/gm)].map((entry) => entry[1]);
   }
 
+  function parseLuaStylePilotRanges(): Record<string, readonly [number, number]> {
+    const pluginPath = path.resolve(process.cwd(), '..', 'plugin', 'LightroomMCP.lrplugin', 'HandlerDevelop.lua');
+    const source = fs.readFileSync(pluginPath, 'utf8');
+    const match = source.match(/local STYLEPILOT_DEVELOP_PARAMETER_RANGES = \{([\s\S]*?)\n\}/);
+    if (!match) {
+      throw new Error('STYLEPILOT_DEVELOP_PARAMETER_RANGES table not found');
+    }
+
+    return Object.fromEntries(
+      [...match[1].matchAll(/^\s*([A-Za-z0-9]+) = \{ (-?\d+), (-?\d+) \},/gm)]
+        .map((entry) => [entry[1], [Number(entry[2]), Number(entry[3])]]),
+    );
+  }
+
   it('restricts copy whitelist to allowlisted SDK keys', () => {
     const tool = TOOL_DEFINITIONS.find((t) => t.name === 'copy_develop_settings');
     const properties = tool?.inputSchema.properties as Record<
@@ -163,6 +223,21 @@ describe('develop setting schema', () => {
 
   it('matches Lua develop setting allowlist', () => {
     expect(parseLuaDevelopSettingKeys()).toEqual(DEVELOP_SETTING_KEYS);
+  });
+
+  it('strictly ranges every StylePilot setting and matches Lua', () => {
+    const tool = TOOL_DEFINITIONS.find((t) => t.name === 'set_stylepilot_develop_settings');
+    const properties = tool?.inputSchema.properties as Record<
+      string,
+      { properties?: Record<string, { type: string; minimum: number; maximum: number }> }
+    >;
+    const settingSchemas = properties.settings.properties ?? {};
+
+    expect(Object.keys(settingSchemas)).toEqual(Object.keys(STYLEPILOT_DEVELOP_PARAMETER_RANGES));
+    for (const [key, [minimum, maximum]] of Object.entries(STYLEPILOT_DEVELOP_PARAMETER_RANGES)) {
+      expect(settingSchemas[key]).toEqual({ type: 'number', minimum, maximum });
+    }
+    expect(parseLuaStylePilotRanges()).toEqual(STYLEPILOT_DEVELOP_PARAMETER_RANGES);
   });
 });
 

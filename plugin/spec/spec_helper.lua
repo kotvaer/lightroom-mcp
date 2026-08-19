@@ -49,7 +49,7 @@ local VALID_METADATA_KEYS = {}
 for _, key in ipairs({
     -- File / catalog
     "fileName", "fileSize", "fileFormat", "path", "dimensions",
-    "rating", "colorNameForLabel", "pickStatus", "keywords",
+    "rating", "colorNameForLabel", "pickStatus", "keywords", "isVirtualCopy",
     -- EXIF
     "dateTimeOriginal", "dateTimeDigitized", "cameraMake", "cameraModel",
     "cameraSerialNumber", "lens", "isoSpeedRating", "focalLength",
@@ -78,11 +78,19 @@ end
 -- Build a fake photo with the given metadata table.
 -- meta keys correspond to keys passed to getRawMetadata / getFormattedMetadata / localIdentifier.
 function M.fakePhoto(meta)
+    local developSnapshots = {}
+    local function copyTable(source)
+        local copy = {}
+        for key, value in pairs(source or {}) do copy[key] = value end
+        return copy
+    end
+
     return {
         localIdentifier = meta.localIdentifier or meta.id or "photo-id",
         getRawMetadata = function(_, key) return readMetadata(meta, key) end,
         getFormattedMetadata = function(_, key) return readMetadata(meta, key) end,
-        getDevelopSettings = function() return meta.developSettings or {} end,
+        getDevelopSettings = function() return copyTable(meta.developSettings) end,
+        getDevelopSnapshots = function() return developSnapshots end,
         addKeyword = function(_, kw)
             meta.__addedKeywords = meta.__addedKeywords or {}
             table.insert(meta.__addedKeywords, kw)
@@ -95,8 +103,38 @@ function M.fakePhoto(meta)
         applyDevelopPreset = function(_, preset)
             meta.__appliedPreset = preset
         end,
-        applyDevelopSettings = function(_, settings)
+        applyDevelopSettings = function(_, settings, historyName)
             meta.__appliedSettings = settings
+            meta.__historyName = historyName
+            meta.developSettings = meta.developSettings or {}
+            for key, value in pairs(settings) do meta.developSettings[key] = value end
+        end,
+        createDevelopSnapshot = function(_, snapshotName, updateInPlace)
+            for _, snapshot in ipairs(developSnapshots) do
+                if snapshot.name == snapshotName then
+                    if not updateInPlace then return false end
+                    snapshot.settings = copyTable(meta.developSettings)
+                    return true
+                end
+            end
+            local ordinal = #developSnapshots + 1
+            table.insert(developSnapshots, {
+                snapshotID = "snapshot-" .. tostring(ordinal),
+                id_global = "global-snapshot-" .. tostring(ordinal),
+                name = snapshotName,
+                settings = copyTable(meta.developSettings),
+            })
+            return true
+        end,
+        applyDevelopSnapshot = function(_, snapshotId)
+            for _, snapshot in ipairs(developSnapshots) do
+                if snapshot.snapshotID == snapshotId then
+                    meta.developSettings = copyTable(snapshot.settings)
+                    meta.__appliedSnapshot = snapshotId
+                    return
+                end
+            end
+            error("snapshot not found: " .. tostring(snapshotId))
         end,
     }
 end
@@ -130,6 +168,8 @@ function M.fakeCatalog(opts)
     local collectionSets = opts.collectionSets or {}
     local createdCollections = {}
     local createdKeywords = {}
+    local createdVirtualCopies = {}
+    local selectedPhoto = nil
     local readAccessCount = 0
     local writeAccessCount = 0
     -- Tracks whether a catalog query (getTargetPhotos/findPhotos/getAllPhotos)
@@ -215,6 +255,24 @@ function M.fakeCatalog(opts)
             end
             return nil
         end,
+        setSelectedPhotos = function(_, activePhoto)
+            selectedPhoto = activePhoto
+        end,
+        createVirtualCopies = function(_, copyName)
+            if not selectedPhoto then return {} end
+            local copy = M.fakePhoto({
+                id = "virtual-" .. tostring(#createdVirtualCopies + 1),
+                path = selectedPhoto:getRawMetadata('path'),
+                fileName = selectedPhoto:getFormattedMetadata('fileName'),
+                copyName = copyName,
+                isVirtualCopy = true,
+                developSettings = selectedPhoto:getDevelopSettings(),
+            })
+            table.insert(createdVirtualCopies, copy)
+            table.insert(photos, copy)
+            selectedPhoto = copy
+            return { copy }
+        end,
         createCollection = function(_, name)
             local c = M.fakeCollection(name, {})
             table.insert(createdCollections, c)
@@ -233,6 +291,8 @@ function M.fakeCatalog(opts)
         end,
         getCreatedCollections = function() return createdCollections end,
         getCreatedKeywords = function() return createdKeywords end,
+        getCreatedVirtualCopies = function() return createdVirtualCopies end,
+        getSelectedPhoto = function() return selectedPhoto end,
         getReadAccessCount = function() return readAccessCount end,
         getWriteAccessCount = function() return writeAccessCount end,
     }

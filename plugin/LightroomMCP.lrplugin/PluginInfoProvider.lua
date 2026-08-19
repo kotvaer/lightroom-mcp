@@ -17,6 +17,7 @@ local HandlerImport = require 'HandlerImport'
 local HandlerExport = require 'HandlerExport'
 local HandlerSelection = require 'HandlerSelection'
 local HandlerDevelop = require 'HandlerDevelop'
+local HandlerStylePilot = require 'HandlerStylePilot'
 local Log = require 'Log'
 
 local DEFAULT_REQUEST_PORT = 58763
@@ -138,6 +139,14 @@ local DISPATCH = {
     list_develop_presets = HandlerDevelop.listDevelopPresets,
     apply_develop_preset = HandlerDevelop.applyDevelopPreset,
     copy_develop_settings = HandlerDevelop.copyDevelopSettings,
+    create_virtual_copy = HandlerDevelop.createVirtualCopy,
+    create_develop_snapshot = HandlerDevelop.createDevelopSnapshot,
+    restore_develop_snapshot = HandlerDevelop.restoreDevelopSnapshot,
+    set_stylepilot_develop_settings = HandlerDevelop.setStylePilotDevelopSettings,
+    request_stylepilot_approval = HandlerStylePilot.requestApproval,
+    request_stylepilot_calibration_approval = HandlerStylePilot.requestCalibrationApproval,
+    get_stylepilot_approval = HandlerStylePilot.getApproval,
+    cancel_stylepilot_approval = HandlerStylePilot.cancelApproval,
     set_develop_settings = HandlerDevelop.setDevelopSettings,
 }
 

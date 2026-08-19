@@ -1,5 +1,11 @@
 # Lightroom Classic MCP Server
 
+> **StylePilot fork:** this branch adds safety-oriented Lightroom tools used by
+> StylePilot: guarded virtual copies, recovery snapshots, rollback, and a
+> strict range-checked Develop write path plus a native request-bound review
+> panel. The original project and
+> MIT license remain credited in the repository history and `LICENSE`.
+
 Lets Claude (and other AI assistants) talk to your **Adobe Lightroom Classic** photo catalog. Search photos, set ratings, edit develop settings, manage collections, import/export — all by chatting.
 
 [![npm](https://img.shields.io/npm/v/@mskalski/lightroom-mcp.svg)](https://www.npmjs.com/package/@mskalski/lightroom-mcp)
@@ -166,6 +172,12 @@ If you'd rather drop the plugin in by hand:
 | `list_develop_presets` | Discover available Develop presets. |
 | `apply_develop_preset` | Apply a named preset to photos. |
 | `copy_develop_settings` | Copy develop settings between photos. |
+| `create_virtual_copy` | Create one named virtual copy and return its catalog ID. |
+| `create_develop_snapshot` | Create a recovery snapshot on a verified virtual copy. |
+| `restore_develop_snapshot` | Restore a named snapshot on a verified virtual copy. |
+| `set_stylepilot_develop_settings` | Apply the strict numeric StylePilot setting subset to a verified virtual copy. |
+| `request_stylepilot_approval` | Open or focus the native request-bound StylePilot review panel. |
+| `get_stylepilot_approval` | Poll the approval decision for one request ID. |
 | `set_develop_settings` | Write SDK setting key/values directly. |
 
 Full schemas and parameter docs: [`server/src/list-tools-handler.ts`](server/src/list-tools-handler.ts).
