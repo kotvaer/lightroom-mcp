@@ -1,3 +1,3 @@
-local StylePilotPanel = require 'StylePilotPanel'
+local StylePilotWorkspace = require 'StylePilotWorkspace'
 
-StylePilotPanel.show()
+StylePilotWorkspace.show()
