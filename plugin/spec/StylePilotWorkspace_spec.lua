@@ -131,7 +131,6 @@ local function setup(options)
         },
         LrLogger = helper.defaultLrLogger(),
     })
-    _G.WIN_ENV = false
     package.loaded.Log = nil
     package.loaded.StylePilotWorkspace = nil
     local Workspace = require 'StylePilotWorkspace'
@@ -212,6 +211,7 @@ describe("StylePilotWorkspace", function()
     it("quotes apostrophes without shell interpolation", function()
         local fixture = setup()
         local command = fixture.workspace.commandForTests({
+            platform = "macos",
             runtime_executable = "/App's/stylepilot",
             env_file = "/Config/.env",
             preview_root = "/Preview Root",
@@ -220,6 +220,21 @@ describe("StylePilotWorkspace", function()
 
         assert.matches("'\"'\"'", command)
         assert.matches("'/Preview Root'", command)
+        fixture.cleanup()
+    end)
+
+    it("quotes Windows paths using the configured runtime platform", function()
+        local fixture = setup()
+        local command = fixture.workspace.commandForTests({
+            platform = "windows",
+            runtime_executable = "C:\\Style Pilot\\stylepilot.exe",
+            env_file = "C:\\Style Pilot\\.env",
+            preview_root = "C:\\Style Pilot\\previews",
+            result_directory = "C:\\results",
+        }, "job1", "C:\\results\\job1.json", false)
+
+        assert.is_not_nil(command:find('"C:\\Style Pilot\\stylepilot.exe"', 1, true))
+        assert.is_not_nil(command:find('"C:\\Style Pilot\\.env"', 1, true))
         fixture.cleanup()
     end)
 end)

@@ -66,6 +66,9 @@ local function loadRuntimeConfig()
     if config.schema_version ~= "stylepilot-lightroom-panel-runtime-v1" then
         error("Unsupported StylePilot runtime configuration schema")
     end
+    if config.platform ~= "macos" and config.platform ~= "windows" then
+        error("Unsupported StylePilot runtime platform")
+    end
     requireFile(config.runtime_executable, "StylePilot runtime executable")
     requireFile(config.env_file, "StylePilot dotenv configuration")
     if config.default_profile ~= nil then
@@ -82,10 +85,12 @@ local function loadRuntimeConfig()
     return config, path
 end
 
-local function quoteArgument(value)
+local function quoteArgument(value, platform)
     value = tostring(value)
-    if WIN_ENV then
-        return '"' .. value:gsub('"', '\\"') .. '"'
+    if value:find("[\r\n]") then error("StylePilot command arguments cannot contain newlines") end
+    if platform == "windows" then
+        if value:find('"') then error("StylePilot Windows paths cannot contain double quotes") end
+        return '"' .. value .. '"'
     end
     return "'" .. value:gsub("'", [['"'"']]) .. "'"
 end
@@ -112,7 +117,7 @@ local function commandFor(config, requestId, resultPath, apply)
 
     local quoted = {}
     for _, argument in ipairs(arguments) do
-        table.insert(quoted, quoteArgument(argument))
+        table.insert(quoted, quoteArgument(argument, config.platform))
     end
     return table.concat(quoted, " ")
 end
